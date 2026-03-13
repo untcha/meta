@@ -3,7 +3,7 @@
 This repo contains Alex's meta configuration files:
 
 - `.gitignore` template
-- `golangci.yml` configuration
+- `.golangci.yml` configuration
 - `LICENSE` template
 - `Taskfile.yml` templates
   - for Go CLI projects
