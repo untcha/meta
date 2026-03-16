@@ -257,4 +257,4 @@ tasks:
       - go.mod
       - go.sum
     cmds:
-      - go list -f '{{.GO_LIST_TEST_FILTER}}' ./... | xargs -r go test
+      - task: test:existing
