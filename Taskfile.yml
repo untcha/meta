@@ -15,7 +15,9 @@ vars:
   CGO: CGO_ENABLED=0
   GOHOST: "GOOS={{.GOOS}} GOARCH={{.GOARCH}}"
 
-  APPMETA_MODULE_PATH: "github.com/{{.OWNER}}/{{.REPO}}/internal/appmeta"
+  MODULE_PATH:
+    sh: go list -m
+  APPMETA_MODULE_PATH: "{{.MODULE_PATH}}/internal/appmeta"
   GIT_COMMIT:
     sh: git rev-parse --short HEAD 2>/dev/null || echo unknown
   BUILD_DATE:
@@ -47,8 +49,6 @@ tasks:
   build:
     desc: Build the binary for the current OS/ARCH
     cmds:
-      - task: clean
-      - task: check
       - mkdir -p bin
       - "{{.CGO}} {{.GOHOST}} go build -a -ldflags='{{.LDFLAGS}}' -o {{.BIN_NAME}} cmd/{{.APP_NAME}}/main.go"
       - mv {{.BIN_NAME}} bin
@@ -58,6 +58,12 @@ tasks:
       - go.sum
     generates:
       - bin/{{.BIN_NAME}}
+
+  build:check:
+    desc: Run checks, then build the binary
+    cmds:
+      - task: check
+      - task: build
 
   check:
     desc: Run all checks (formatting, linting, tests)
@@ -85,7 +91,7 @@ tasks:
       - rm -rf {{.COVERAGE_DIR}}
 
   clean:all:
-    desc: "Clean everything (builds, caches, coverage)"
+    desc: Clean everything (builds, caches, coverage)
     cmds:
       - task: clean
       - task: clean:caches
@@ -140,17 +146,17 @@ tasks:
   lint:
     desc: Run golangci-lint
     cmds:
-      - golangci-lint run ./...
+      - golangci-lint run
 
   lint:verbose:
     desc: Run golangci-lint with verbose output
     cmds:
-      - golangci-lint run -v ./...
+      - golangci-lint run -v
 
   lint:fmt:
     desc: Run golangci-lint formatter
     cmds:
-      - golangci-lint fmt ./...
+      - golangci-lint fmt
 
   test:
     desc: Run Go tests
@@ -187,7 +193,7 @@ tasks:
       - go list -f '{{.GO_LIST_TEST_FILTER}}' ./... | xargs -r go test
 
   test:existing:verbose:
-    desc: Run tests in packages containing test files only with verbose output
+    desc: Run tests in packages containing test files only with verbose output and race detector
     summary: |
       This task lists all packages that contain test files and runs tests only in those packages.
       This helps to avoid cluttering the output with "[no test files]" messages from packages without tests.
@@ -195,7 +201,7 @@ tasks:
       It also considers both test files in the same package and external test files (XTestGoFiles).
       e.g. a package with `package foo` and `foo_test.go` with `package foo_test`.
     cmds:
-      - go list -f '{{.GO_LIST_TEST_FILTER}}' ./... | xargs -r go test -v
+      - go list -f '{{.GO_LIST_TEST_FILTER}}' ./... | xargs -r go test -v -race
 
   test:quick:
     desc: Run quick tests only (skip long-running tests)
