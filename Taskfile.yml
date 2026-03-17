@@ -2,18 +2,28 @@
 version: "3"
 
 vars:
+  # Metadata variables for the project, used in build and module paths
   OWNER: untcha # GitHub owner/org for the project, used in module paths and metadata
   REPO: acme-repo # GitHub repository name, used in module paths and metadata
   APP_NAME: acme-app # Name of the application
   BIN_NAME: "{{.APP_NAME}}" # Name of the binary, if different from the app name
 
+  # GOOS and GOARCH are determined dynamically using `go env`
+  # but can be overridden by setting TARGET_OS and TARGET_ARCH environment variables.
   GOOS:
     sh: go env GOOS
   GOARCH:
     sh: go env GOARCH
 
+  # TARGET_OS and TARGET_ARCH can be set to override the default GOOS and GOARCH values.
+  TARGET_OS: "{{default .GOOS .TARGET_OS}}"
+  TARGET_ARCH: "{{default .GOARCH .TARGET_ARCH}}"
+
   CGO: CGO_ENABLED=0
-  GOHOST: "GOOS={{.GOOS}} GOARCH={{.GOARCH}}"
+  GOHOST: "GOOS={{.TARGET_OS}} GOARCH={{.TARGET_ARCH}}"
+
+  BIN_DIR: "bin/{{.TARGET_OS}}-{{.TARGET_ARCH}}"
+  BIN_PATH: "{{.BIN_DIR}}/{{.BIN_NAME}}"
 
   MODULE_PATH:
     sh: go list -m
@@ -47,17 +57,16 @@ vars:
 
 tasks:
   build:
-    desc: Build the binary for the current OS/ARCH
+    desc: Build the binary for the target OS/ARCH
     cmds:
-      - mkdir -p bin
-      - "{{.CGO}} {{.GOHOST}} go build -a -ldflags='{{.LDFLAGS}}' -o {{.BIN_NAME}} cmd/{{.APP_NAME}}/main.go"
-      - mv {{.BIN_NAME}} bin
+      - mkdir -p {{.BIN_DIR}}
+      - "{{.CGO}} {{.GOHOST}} go build -a -trimpath -ldflags='{{.LDFLAGS}}' -o {{.BIN_PATH}} cmd/{{.APP_NAME}}/main.go"
     sources:
       - "**/*.go"
       - go.mod
       - go.sum
     generates:
-      - bin/{{.BIN_NAME}}
+      - "{{.BIN_PATH}}"
 
   build:check:
     desc: Run checks, then build the binary
@@ -126,7 +135,7 @@ tasks:
     cmds:
       - task: build
       - mkdir -p {{.LOCAL_BIN}}
-      - cp bin/{{.BIN_NAME}} {{.LOCAL_BIN}}/{{.BIN_NAME}}
+      - cp {{.BIN_PATH}} {{.LOCAL_BIN}}/{{.BIN_NAME}}
       - echo "Installed '{{.BIN_NAME}}' to '{{.LOCAL_BIN}}/'"
       - echo "Make sure '{{.LOCAL_BIN}}' is in your PATH"
 
