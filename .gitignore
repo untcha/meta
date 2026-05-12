@@ -2,6 +2,7 @@
 dist/
 bin/
 coverage/
+tmp/
 
 ### Zed ###
 .zed/
