@@ -140,6 +140,11 @@ tasks:
             - echo "Installed '{{.BIN_NAME}}' to '{{.LOCAL_BIN}}/'"
             - echo "Make sure '{{.LOCAL_BIN}}' is in your PATH"
 
+    install:
+        desc: Alias for dev:install
+        cmds:
+            - task: dev:install
+
     dev:clean:
         desc: Clean the development installation
         cmds:
