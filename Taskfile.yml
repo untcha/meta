@@ -133,6 +133,7 @@ tasks:
     dev:install:
         desc: Install the binary in {{.LOCAL_BIN}} for development
         cmds:
+            - task: clean
             - task: build
             - mkdir -p {{.LOCAL_BIN}}
             - cp {{.BIN_PATH}} {{.LOCAL_BIN}}/{{.BIN_NAME}}
