@@ -1,0 +1,122 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+# Source: https://github.com/untcha/meta
+# Taskfile for Go CLI tools (produces a versioned, build-stamped binary).
+# Shared Go tasks (fmt, lint, deps, test:*, coverage, clean:caches/coverage) live
+# in ../common.yml and are flattened into this namespace. This file adds the
+# binary build, cross-compilation, and dev-install tasks.
+# For libraries use ../library/Taskfile.yml; for AWS Lambdas use ../lambda/Taskfile.yml.
+
+includes:
+    # Shared tasks, flattened so they appear unprefixed (e.g. `task lint`).
+    common:
+        taskfile: ../common.yml
+        flatten: true
+
+vars:
+    # Metadata variables for the project, used in build and module paths
+    OWNER: untcha # GitHub owner/org for the project, used in module paths and metadata
+    REPO: acme-repo # GitHub repository name, used in module paths and metadata
+    APP_NAME: acme-app # Name of the application
+    BIN_NAME: "{{.APP_NAME}}" # Name of the binary, if different from the app name
+
+    # GOOS and GOARCH are determined dynamically using `go env`
+    # but can be overridden by setting TARGET_OS and TARGET_ARCH environment variables.
+    GOOS:
+        sh: go env GOOS
+    GOARCH:
+        sh: go env GOARCH
+
+    # TARGET_OS and TARGET_ARCH can be set to override the default GOOS and GOARCH values.
+    TARGET_OS: "{{default .GOOS .TARGET_OS}}"
+    TARGET_ARCH: "{{default .GOARCH .TARGET_ARCH}}"
+
+    CGO: CGO_ENABLED=0
+    GOHOST: "GOOS={{.TARGET_OS}} GOARCH={{.TARGET_ARCH}}"
+
+    BIN_DIR: "bin/{{.TARGET_OS}}-{{.TARGET_ARCH}}"
+    BIN_PATH: "{{.BIN_DIR}}/{{.BIN_NAME}}"
+
+    MODULE_PATH:
+        sh: go list -m
+    APPMETA_MODULE_PATH: "{{.MODULE_PATH}}/internal/appmeta"
+    GIT_COMMIT:
+        sh: git rev-parse --short HEAD 2>/dev/null || echo unknown
+    BUILD_DATE:
+        sh: date -u +"%Y-%m-%dT%H:%M:%SZ"
+
+    LDFLAGS:
+        sh: |
+            VERSION_VALUE="${VERSION:-dev}"
+            COMMIT_VALUE="${COMMIT:-{{.GIT_COMMIT}}}"
+            BUILD_DATE_VALUE="${BUILD_DATE:-{{.BUILD_DATE}}}"
+            echo "-s -w \
+            -X {{.APPMETA_MODULE_PATH}}.Version=${VERSION_VALUE} \
+            -X {{.APPMETA_MODULE_PATH}}.Commit=${COMMIT_VALUE} \
+            -X {{.APPMETA_MODULE_PATH}}.BuildDate=${BUILD_DATE_VALUE}"
+
+    # LOCAL_BIN is the directory where the binary will be installed for development purposes
+    LOCAL_BIN: $HOME/.local/bin
+
+tasks:
+    build:
+        desc: Build the binary for the target OS/ARCH
+        cmds:
+            - mkdir -p {{.BIN_DIR}}
+            - "{{.CGO}} {{.GOHOST}} go build -a -trimpath -ldflags='{{.LDFLAGS}}' -o {{.BIN_PATH}} cmd/{{.APP_NAME}}/main.go"
+        sources:
+            - "**/*.go"
+            - go.mod
+            - go.sum
+        generates:
+            - "{{.BIN_PATH}}"
+
+    build:check:
+        desc: Run checks, then build the binary
+        cmds:
+            - task: check
+            - task: build
+
+    check:
+        desc: Run all checks (formatting, linting, tests)
+        cmds:
+            - task: fmt
+            - task: lint
+            - task: test:existing
+
+    clean:
+        desc: Clean temp files and folders
+        cmds:
+            - rm -rf ./dist/
+            - rm -rf ./bin/
+
+    clean:all:
+        desc: Clean everything (builds, caches, coverage)
+        cmds:
+            - task: clean
+            - task: clean:caches
+            - task: clean:coverage
+
+    dev:install:
+        desc: Install the binary in {{.LOCAL_BIN}} for development
+        cmds:
+            - task: clean
+            - task: build
+            - mkdir -p {{.LOCAL_BIN}}
+            - cp {{.BIN_PATH}} {{.LOCAL_BIN}}/{{.BIN_NAME}}
+            - echo "Installed '{{.BIN_NAME}}' to '{{.LOCAL_BIN}}/'"
+            - echo "Make sure '{{.LOCAL_BIN}}' is in your PATH"
+
+    install:
+        desc: Alias for dev:install
+        cmds:
+            - task: dev:install
+
+    dev:clean:
+        desc: Clean the development installation
+        cmds:
+            - rm -f {{.LOCAL_BIN}}/{{.BIN_NAME}}
+        preconditions:
+            - sh: test -f {{.LOCAL_BIN}}/{{.BIN_NAME}}
+              msg: "'{{.BIN_NAME}}' not found in '{{.LOCAL_BIN}}'. Nothing to clean."

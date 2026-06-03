@@ -1,0 +1,138 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+# Source: https://github.com/untcha/meta
+# Taskfile for AWS Lambda functions written in Go (provided.al2023 / bootstrap).
+# Shared Go tasks (fmt, lint, deps, test:*, coverage, clean:caches/coverage) live
+# in ../common.yml and are flattened into this namespace. This file adds the
+# Lambda-specific build, package, and deploy tasks.
+# For CLI tools use ../cli/Taskfile.yml; for libraries use ../library/Taskfile.yml.
+
+includes:
+    # Shared tasks, flattened so they appear unprefixed (e.g. `task lint`).
+    common:
+        taskfile: ../common.yml
+        flatten: true
+
+vars:
+    # Metadata variables for the Lambda function
+    APP_NAME: "acme-lambda-name"
+    BIN_NAME: "bootstrap"
+    LAMBDA_FUNCTION_NAME: "go-acme-lambda-name"
+
+    TARGET_OS: '{{default "linux" .TARGET_OS}}'
+    TARGET_ARCH: '{{default "amd64" .TARGET_ARCH}}'
+
+    CGO: CGO_ENABLED=0
+    GOHOST: "GOOS={{.TARGET_OS}} GOARCH={{.TARGET_ARCH}}"
+
+    BIN_DIR: "bin/{{.TARGET_OS}}-{{.TARGET_ARCH}}"
+    BIN_PATH: "{{.BIN_DIR}}/{{.BIN_NAME}}"
+
+    ARTIFACT_PATH: '{{default (printf "dist/%s-%s-%s.zip" .APP_NAME .TARGET_OS .TARGET_ARCH) .ARTIFACT_PATH}}'
+
+    MODULE_PATH:
+        sh: go list -m
+    APPMETA_MODULE_PATH: "{{.MODULE_PATH}}/internal/appmeta"
+    GIT_COMMIT:
+        sh: git rev-parse --short HEAD 2>/dev/null || echo unknown
+    BUILD_DATE:
+        sh: date -u +"%Y-%m-%dT%H:%M:%SZ"
+
+    LDFLAGS:
+        sh: |
+            VERSION_VALUE="${VERSION:-dev}"
+            COMMIT_VALUE="${COMMIT:-{{.GIT_COMMIT}}}"
+            BUILD_DATE_VALUE="${BUILD_DATE:-{{.BUILD_DATE}}}"
+            echo "-s -w \
+            -X {{.APPMETA_MODULE_PATH}}.Version=${VERSION_VALUE} \
+            -X {{.APPMETA_MODULE_PATH}}.Commit=${COMMIT_VALUE} \
+            -X {{.APPMETA_MODULE_PATH}}.BuildDate=${BUILD_DATE_VALUE}"
+
+tasks:
+    build:
+        desc: Build the Lambda binary for the target OS/ARCH
+        cmds:
+            - mkdir -p {{.BIN_DIR}}
+            - "{{.CGO}} {{.GOHOST}} go build -a -trimpath -ldflags='{{.LDFLAGS}}' -o {{.BIN_PATH}} cmd/{{.APP_NAME}}/main.go"
+        sources:
+            - "**/*.go"
+            - go.mod
+            - go.sum
+        generates:
+            - "{{.BIN_PATH}}"
+
+    build:check:
+        desc: Run checks, then build the Lambda binary
+        cmds:
+            - task: check
+            - task: build
+
+    check:
+        desc: Run all checks (formatting, linting, tests)
+        cmds:
+            - task: fmt
+            - task: lint
+            - task: test:existing
+
+    clean:
+        desc: Clean temp files and folders
+        cmds:
+            - rm -rf ./dist/
+            - rm -rf ./bin/
+
+    clean:all:
+        desc: Clean everything (builds, caches, coverage)
+        cmds:
+            - task: clean
+            - task: clean:caches
+            - task: clean:coverage
+
+    deploy:
+        desc: Deploy the packaged Lambda code to AWS
+        cmds:
+            - task: package
+            - |
+                if [ -z "{{.LAMBDA_FUNCTION_NAME}}" ]; then
+                  echo "LAMBDA_FUNCTION_NAME is required" >&2
+                  exit 1
+                fi
+            - |
+                REGION_VALUE="${AWS_REGION:-${AWS_DEFAULT_REGION:-}}"
+                if [ -z "${REGION_VALUE}" ]; then
+                  echo "AWS_REGION or AWS_DEFAULT_REGION must be set" >&2
+                  exit 1
+                fi
+            - |
+                if [ ! -f "{{.ARTIFACT_PATH}}" ]; then
+                  echo "artifact not found: {{.ARTIFACT_PATH}}" >&2
+                  exit 1
+                fi
+            - |
+                REGION_VALUE="${AWS_REGION:-${AWS_DEFAULT_REGION:-}}"
+                aws lambda update-function-code \
+                  --region "${REGION_VALUE}" \
+                  --function-name {{.LAMBDA_FUNCTION_NAME}} \
+                  --zip-file fileb://{{.ARTIFACT_PATH}}
+            - |
+                REGION_VALUE="${AWS_REGION:-${AWS_DEFAULT_REGION:-}}"
+                aws lambda wait function-updated \
+                  --region "${REGION_VALUE}" \
+                  --function-name {{.LAMBDA_FUNCTION_NAME}}
+
+    package:
+        desc: Package the Lambda binary into a zip artifact
+        cmds:
+            - task: build
+            - mkdir -p $(dirname {{.ARTIFACT_PATH}})
+            - rm -f {{.ARTIFACT_PATH}}
+            - zip -j {{.ARTIFACT_PATH}} {{.BIN_PATH}}
+        sources:
+            - "{{.BIN_PATH}}"
+        generates:
+            - "{{.ARTIFACT_PATH}}"
+
+    package:clean:
+        desc: Remove packaged Lambda artifacts
+        cmds:
+            - rm -f dist/*.zip
