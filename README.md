@@ -1,3 +1,5 @@
+![meta README header](assets/readme-header.png)
+
 # meta
 
 This repo contains Alex's meta configuration files:
