@@ -14,6 +14,12 @@ includes:
         taskfile: ../common.yml
         flatten: true
 
+    # Repo-specific tasks live here and are namespaced (e.g. `task project:update:schema`).
+    # optional:true keeps this generic Taskfile usable in repos without a project file.
+    project:
+        taskfile: ./Taskfile.project.yml
+        optional: true
+
 vars:
     # Metadata variables for the Lambda function
     APP_NAME: "acme-lambda-name"

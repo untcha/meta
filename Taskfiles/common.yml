@@ -121,7 +121,7 @@ tasks:
     test:integration:
         desc: "Run integration tests only"
         cmds:
-            - go list -f '{{.GO_LIST_TEST_FILTER}}' ./... | xargs -r go test -run Integration -v
+            - go list -tags=integration -f '{{.GO_LIST_TEST_FILTER}}' ./... | xargs -r go test -tags=integration -run Integration -v
 
     test:unit:
         desc: "Run unit tests only (excluding integration)"
