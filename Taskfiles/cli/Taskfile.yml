@@ -44,16 +44,26 @@ vars:
     BIN_DIR: "bin/{{.TARGET_OS}}-{{.TARGET_ARCH}}"
     BIN_PATH: "{{.BIN_DIR}}/{{.BIN_NAME}}"
 
+    # APPMETA_DIR is the package whose vars get stamped with version/commit/date.
+    # Build stamping only happens when this directory exists (see LDFLAGS).
+    APPMETA_DIR: internal/appmeta
     MODULE_PATH:
         sh: go list -m
-    APPMETA_MODULE_PATH: "{{.MODULE_PATH}}/internal/appmeta"
+    APPMETA_MODULE_PATH: "{{.MODULE_PATH}}/{{.APPMETA_DIR}}"
     GIT_COMMIT:
         sh: git rev-parse --short HEAD 2>/dev/null || echo unknown
     BUILD_DATE:
         sh: date -u +"%Y-%m-%dT%H:%M:%SZ"
 
+    # LDFLAGS stamps version metadata into {{.APPMETA_DIR}} when that package
+    # exists; otherwise it falls back to plain strip flags so projects without
+    # an appmeta package build cleanly.
     LDFLAGS:
         sh: |
+            if [ ! -d "{{.APPMETA_DIR}}" ]; then
+              echo "-s -w"
+              exit 0
+            fi
             VERSION_VALUE="${VERSION:-dev}"
             COMMIT_VALUE="${COMMIT:-{{.GIT_COMMIT}}}"
             BUILD_DATE_VALUE="${BUILD_DATE:-{{.BUILD_DATE}}}"
