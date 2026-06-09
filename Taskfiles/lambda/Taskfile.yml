@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 version: "3"
 
-# Source: https://github.com/untcha/meta
+# Source: https://github.com/untcha/meta (Taskfiles/lambda/Taskfile.yml)
 # Taskfile for AWS Lambda functions written in Go (provided.al2023 / bootstrap).
 # Shared Go tasks (fmt, lint, deps, test:*, coverage, clean:caches/coverage) live
 # in ../common.yml and are flattened into this namespace. This file adds the
