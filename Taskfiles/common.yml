@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 version: "3"
 
-# Source: https://github.com/untcha/meta
+# Source: https://github.com/untcha/meta (Taskfiles/common.yml)
 # Shared Go tasks common to ALL project types (CLI, library, lambda).
 # This file is not used directly; each project-type Taskfile includes it with
 # `flatten: true`, so these tasks appear unprefixed (e.g. `task lint`, not
@@ -17,6 +17,9 @@ vars:
     COVERAGE_DIR: coverage
     COVERAGE_FILE: "{{.COVERAGE_DIR}}/coverage.out"
     COVERAGE_HTML: "{{.COVERAGE_DIR}}/coverage.html"
+
+    # Meta repository raw URL
+    META_RAW: https://raw.githubusercontent.com/untcha/meta/main
 
 tasks:
     default:
@@ -186,3 +189,44 @@ tasks:
         desc: Clean coverage files
         cmds:
             - rm -rf {{.COVERAGE_DIR}}
+
+    # Check for drift against meta-managed files
+    # I want to control my boilerplate files (Taskfile.yml, .gitignore, .golangci.yml, etc.)
+    # in a single place (untcha/meta)
+    # If I find a better way to manage this, I will remove this task.
+    meta:check:
+        desc: Check meta-managed files for drift against untcha/meta
+        silent: true
+        vars:
+            # local_path:meta_path:mode   (mode = exact | novars)
+            FILES: |
+                taskfiles/common.yml:Taskfiles/common.yml:exact
+                Taskfile.yml:Taskfiles/cli/Taskfile.yml:novars
+                .gitignore:.gitignore:exact
+                .golangci.yml:.golangci.yml:exact
+        cmds:
+            - |
+                set -eu
+                tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+                echo 0 > "$tmp/drift"
+                printf '%s\n' '{{.FILES}}' | while IFS=: read -r local meta mode; do
+                [ -z "$local" ] && continue
+                if [ ! -f "$local" ]; then
+                    printf '?? missing locally: %s\n' "$local"; echo 1 > "$tmp/drift"; continue
+                fi
+                if ! curl -fsSL "{{.META_RAW}}/$meta" -o "$tmp/remote"; then
+                    printf '!! could not fetch %s from meta\n' "$meta"; continue
+                fi
+                if [ "$mode" = novars ] && command -v yq >/dev/null 2>&1; then
+                    yq '(.vars[]) = "_"' "$local"      > "$tmp/l"
+                    yq '(.vars[]) = "_"' "$tmp/remote"  > "$tmp/r"
+                else
+                    cp "$local" "$tmp/l"; cp "$tmp/remote" "$tmp/r"
+                fi
+                if ! diff -u "$tmp/r" "$tmp/l" > "$tmp/d"; then
+                    printf '\n=== drift: %s  vs  meta/%s ===\n' "$local" "$meta"
+                    sed -e "s| $tmp/r| meta/$meta|" -e "s| $tmp/l| $local|" "$tmp/d"
+                    echo 1 > "$tmp/drift"
+                fi
+                done
+                if [ "$(cat "$tmp/drift")" = 0 ]; then echo "✓ in sync with meta"; else exit 1; fi
