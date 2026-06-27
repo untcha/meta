@@ -21,6 +21,8 @@ includes:
         optional: true
 
 vars:
+    META_TYPE: lambda
+
     # Metadata variables for the Lambda function
     APP_NAME: "acme-lambda-name"
     BIN_NAME: "bootstrap"

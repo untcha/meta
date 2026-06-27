@@ -21,6 +21,9 @@ includes:
         taskfile: ./Taskfile.project.yml
         optional: true
 
+vars:
+    META_TYPE: library
+
 tasks:
     check:
         desc: Run all checks (formatting, linting, vet, compile, tests)

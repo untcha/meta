@@ -21,6 +21,8 @@ includes:
         optional: true
 
 vars:
+    META_TYPE: cli
+
     # Metadata variables for the project, used in build and module paths
     OWNER: untcha # GitHub owner/org for the project, used in module paths and metadata
     REPO: acme-repo # GitHub repository name, used in module paths and metadata
