@@ -1,23 +1,30 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 version: "3"
 
-# Source: https://github.com/untcha/meta (Taskfiles/lambda/Taskfile.yml)
+# Source: https://github.com/untcha/meta (taskfiles/lambda/Taskfile.yml)
 # Taskfile for AWS Lambda functions written in Go (provided.al2023 / bootstrap).
 # Shared Go tasks (fmt, lint, deps, test:*, coverage, clean:caches/coverage) live
-# in ../common.yml and are flattened into this namespace. This file adds the
+# in taskfiles/common.yml and are flattened into this namespace. This file adds the
 # Lambda-specific build, package, and deploy tasks.
-# For CLI tools use ../cli/Taskfile.yml; for libraries use ../library/Taskfile.yml.
+# For CLI tools use taskfiles/cli/Taskfile.yml; for libraries use taskfiles/library/Taskfile.yml.
 
 includes:
     # Shared tasks, flattened so they appear unprefixed (e.g. `task lint`).
+    #
+    # The path is relative to the DESTINATION repo root, where this file becomes
+    # Taskfile.yml beside a vendored taskfiles/common.yml. It therefore does not
+    # resolve here in the templates directory, and that is deliberate: making it
+    # ../common.yml would work here and silently escape every consuming repo.
     common:
-        taskfile: ../common.yml
+        taskfile: ./taskfiles/common.yml
         flatten: true
 
     # Repo-specific tasks live here and are namespaced (e.g. `task project:update:schema`).
     # optional:true keeps this generic Taskfile usable in repos without a project file.
+    # Keep the file at that path: because the include is optional, a mismatch is
+    # silent — the tasks simply never appear and `task` still exits 0.
     project:
-        taskfile: ./Taskfile.project.yml
+        taskfile: ./taskfiles/Taskfile.project.yml
         optional: true
 
 vars:

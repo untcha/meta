@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 version: "3"
 
-# Source: https://github.com/untcha/meta (Taskfiles/common.yml)
+# Source: https://github.com/untcha/meta (taskfiles/common.yml)
 # Shared Go tasks common to ALL project types (CLI, library, lambda).
 # This file is not used directly; each project-type Taskfile includes it with
 # `flatten: true`, so these tasks appear unprefixed (e.g. `task lint`, not
