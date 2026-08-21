@@ -9,155 +9,155 @@ version: "3"
 # For CLI tools use taskfiles/cli/Taskfile.yml; for libraries use taskfiles/library/Taskfile.yml.
 
 includes:
-    # Shared tasks, flattened so they appear unprefixed (e.g. `task lint`).
-    #
-    # The path is relative to the DESTINATION repo root, where this file becomes
-    # Taskfile.yml beside a vendored taskfiles/common.yml. It therefore does not
-    # resolve here in the templates directory, and that is deliberate: making it
-    # ../common.yml would work here and silently escape every consuming repo.
-    common:
-        taskfile: ./taskfiles/common.yml
-        flatten: true
+  # Shared tasks, flattened so they appear unprefixed (e.g. `task lint`).
+  #
+  # The path is relative to the DESTINATION repo root, where this file becomes
+  # Taskfile.yml beside a vendored taskfiles/common.yml. It therefore does not
+  # resolve here in the templates directory, and that is deliberate: making it
+  # ../common.yml would work here and silently escape every consuming repo.
+  common:
+    taskfile: ./taskfiles/common.yml
+    flatten: true
 
-    # Repo-specific tasks live here and are namespaced (e.g. `task project:update:schema`).
-    # optional:true keeps this generic Taskfile usable in repos without a project file.
-    # Keep the file at that path: because the include is optional, a mismatch is
-    # silent — the tasks simply never appear and `task` still exits 0.
-    project:
-        taskfile: ./taskfiles/Taskfile.project.yml
-        optional: true
+  # Repo-specific tasks live here and are namespaced (e.g. `task project:update:schema`).
+  # optional:true keeps this generic Taskfile usable in repos without a project file.
+  # Keep the file at that path: because the include is optional, a mismatch is
+  # silent — the tasks simply never appear and `task` still exits 0.
+  project:
+    taskfile: ./taskfiles/Taskfile.project.yml
+    optional: true
 
 vars:
-    META_TYPE: lambda
+  META_TYPE: lambda
 
-    # Metadata variables for the Lambda function
-    APP_NAME: "acme-lambda-name"
-    BIN_NAME: "bootstrap"
-    LAMBDA_FUNCTION_NAME: "go-acme-lambda-name"
+  # Metadata variables for the Lambda function
+  APP_NAME: "acme-lambda-name"
+  BIN_NAME: "bootstrap"
+  LAMBDA_FUNCTION_NAME: "go-acme-lambda-name"
 
-    TARGET_OS: '{{default "linux" .TARGET_OS}}'
-    TARGET_ARCH: '{{default "amd64" .TARGET_ARCH}}'
+  TARGET_OS: '{{default "linux" .TARGET_OS}}'
+  TARGET_ARCH: '{{default "amd64" .TARGET_ARCH}}'
 
-    CGO: CGO_ENABLED=0
-    GOHOST: "GOOS={{.TARGET_OS}} GOARCH={{.TARGET_ARCH}}"
+  CGO: CGO_ENABLED=0
+  GOHOST: "GOOS={{.TARGET_OS}} GOARCH={{.TARGET_ARCH}}"
 
-    BIN_DIR: "bin/{{.TARGET_OS}}-{{.TARGET_ARCH}}"
-    BIN_PATH: "{{.BIN_DIR}}/{{.BIN_NAME}}"
+  BIN_DIR: "bin/{{.TARGET_OS}}-{{.TARGET_ARCH}}"
+  BIN_PATH: "{{.BIN_DIR}}/{{.BIN_NAME}}"
 
-    ARTIFACT_PATH: '{{default (printf "dist/%s-%s-%s.zip" .APP_NAME .TARGET_OS .TARGET_ARCH) .ARTIFACT_PATH}}'
+  ARTIFACT_PATH: '{{default (printf "dist/%s-%s-%s.zip" .APP_NAME .TARGET_OS .TARGET_ARCH) .ARTIFACT_PATH}}'
 
-    # APPMETA_DIR is the package whose vars get stamped with version/commit/date.
-    # Build stamping only happens when this directory exists (see LDFLAGS).
-    APPMETA_DIR: internal/appmeta
-    MODULE_PATH:
-        sh: go list -m
-    APPMETA_MODULE_PATH: "{{.MODULE_PATH}}/{{.APPMETA_DIR}}"
-    GIT_COMMIT:
-        sh: git rev-parse --short HEAD 2>/dev/null || echo unknown
-    BUILD_DATE:
-        sh: date -u +"%Y-%m-%dT%H:%M:%SZ"
+  # APPMETA_DIR is the package whose vars get stamped with version/commit/date.
+  # Build stamping only happens when this directory exists (see LDFLAGS).
+  APPMETA_DIR: internal/appmeta
+  MODULE_PATH:
+    sh: go list -m
+  APPMETA_MODULE_PATH: "{{.MODULE_PATH}}/{{.APPMETA_DIR}}"
+  GIT_COMMIT:
+    sh: git rev-parse --short HEAD 2>/dev/null || echo unknown
+  BUILD_DATE:
+    sh: date -u +"%Y-%m-%dT%H:%M:%SZ"
 
-    # LDFLAGS stamps version metadata into {{.APPMETA_DIR}} when that package
-    # exists; otherwise it falls back to plain strip flags so projects without
-    # an appmeta package build cleanly.
-    LDFLAGS:
-        sh: |
-            if [ ! -d "{{.APPMETA_DIR}}" ]; then
-              echo "-s -w"
-              exit 0
-            fi
-            VERSION_VALUE="${VERSION:-dev}"
-            COMMIT_VALUE="${COMMIT:-{{.GIT_COMMIT}}}"
-            BUILD_DATE_VALUE="${BUILD_DATE:-{{.BUILD_DATE}}}"
-            echo "-s -w \
-            -X {{.APPMETA_MODULE_PATH}}.Version=${VERSION_VALUE} \
-            -X {{.APPMETA_MODULE_PATH}}.Commit=${COMMIT_VALUE} \
-            -X {{.APPMETA_MODULE_PATH}}.BuildDate=${BUILD_DATE_VALUE}"
+  # LDFLAGS stamps version metadata into {{.APPMETA_DIR}} when that package
+  # exists; otherwise it falls back to plain strip flags so projects without
+  # an appmeta package build cleanly.
+  LDFLAGS:
+    sh: |
+      if [ ! -d "{{.APPMETA_DIR}}" ]; then
+        echo "-s -w"
+        exit 0
+      fi
+      VERSION_VALUE="${VERSION:-dev}"
+      COMMIT_VALUE="${COMMIT:-{{.GIT_COMMIT}}}"
+      BUILD_DATE_VALUE="${BUILD_DATE:-{{.BUILD_DATE}}}"
+      echo "-s -w \
+      -X {{.APPMETA_MODULE_PATH}}.Version=${VERSION_VALUE} \
+      -X {{.APPMETA_MODULE_PATH}}.Commit=${COMMIT_VALUE} \
+      -X {{.APPMETA_MODULE_PATH}}.BuildDate=${BUILD_DATE_VALUE}"
 
 tasks:
-    build:
-        desc: Build the Lambda binary for the target OS/ARCH
-        cmds:
-            - mkdir -p {{.BIN_DIR}}
-            - "{{.CGO}} {{.GOHOST}} go build -a -trimpath -ldflags='{{.LDFLAGS}}' -o {{.BIN_PATH}} cmd/{{.APP_NAME}}/main.go"
-        sources:
-            - "**/*.go"
-            - go.mod
-            - go.sum
-        generates:
-            - "{{.BIN_PATH}}"
+  build:
+    desc: Build the Lambda binary for the target OS/ARCH
+    cmds:
+      - mkdir -p {{.BIN_DIR}}
+      - "{{.CGO}} {{.GOHOST}} go build -a -trimpath -ldflags='{{.LDFLAGS}}' -o {{.BIN_PATH}} cmd/{{.APP_NAME}}/main.go"
+    sources:
+      - "**/*.go"
+      - go.mod
+      - go.sum
+    generates:
+      - "{{.BIN_PATH}}"
 
-    build:check:
-        desc: Run checks, then build the Lambda binary
-        cmds:
-            - task: check
-            - task: build
+  build:check:
+    desc: Run checks, then build the Lambda binary
+    cmds:
+      - task: check
+      - task: build
 
-    check:
-        desc: Run all checks (formatting, linting, tests)
-        cmds:
-            - task: fmt
-            - task: lint
-            - task: test:existing
+  check:
+    desc: Run all checks (formatting, linting, tests)
+    cmds:
+      - task: fmt
+      - task: lint
+      - task: test:existing
 
-    clean:
-        desc: Clean temp files and folders
-        cmds:
-            - rm -rf ./dist/
-            - rm -rf ./bin/
+  clean:
+    desc: Clean temp files and folders
+    cmds:
+      - rm -rf ./dist/
+      - rm -rf ./bin/
 
-    clean:all:
-        desc: Clean everything (builds, caches, coverage)
-        cmds:
-            - task: clean
-            - task: clean:caches
-            - task: clean:coverage
+  clean:all:
+    desc: Clean everything (builds, caches, coverage)
+    cmds:
+      - task: clean
+      - task: clean:caches
+      - task: clean:coverage
 
-    deploy:
-        desc: Deploy the packaged Lambda code to AWS
-        cmds:
-            - task: package
-            - |
-                if [ -z "{{.LAMBDA_FUNCTION_NAME}}" ]; then
-                  echo "LAMBDA_FUNCTION_NAME is required" >&2
-                  exit 1
-                fi
-            - |
-                REGION_VALUE="${AWS_REGION:-${AWS_DEFAULT_REGION:-}}"
-                if [ -z "${REGION_VALUE}" ]; then
-                  echo "AWS_REGION or AWS_DEFAULT_REGION must be set" >&2
-                  exit 1
-                fi
-            - |
-                if [ ! -f "{{.ARTIFACT_PATH}}" ]; then
-                  echo "artifact not found: {{.ARTIFACT_PATH}}" >&2
-                  exit 1
-                fi
-            - |
-                REGION_VALUE="${AWS_REGION:-${AWS_DEFAULT_REGION:-}}"
-                aws lambda update-function-code \
-                  --region "${REGION_VALUE}" \
-                  --function-name {{.LAMBDA_FUNCTION_NAME}} \
-                  --zip-file fileb://{{.ARTIFACT_PATH}}
-            - |
-                REGION_VALUE="${AWS_REGION:-${AWS_DEFAULT_REGION:-}}"
-                aws lambda wait function-updated \
-                  --region "${REGION_VALUE}" \
-                  --function-name {{.LAMBDA_FUNCTION_NAME}}
+  deploy:
+    desc: Deploy the packaged Lambda code to AWS
+    cmds:
+      - task: package
+      - |
+        if [ -z "{{.LAMBDA_FUNCTION_NAME}}" ]; then
+          echo "LAMBDA_FUNCTION_NAME is required" >&2
+          exit 1
+        fi
+      - |
+        REGION_VALUE="${AWS_REGION:-${AWS_DEFAULT_REGION:-}}"
+        if [ -z "${REGION_VALUE}" ]; then
+          echo "AWS_REGION or AWS_DEFAULT_REGION must be set" >&2
+          exit 1
+        fi
+      - |
+        if [ ! -f "{{.ARTIFACT_PATH}}" ]; then
+          echo "artifact not found: {{.ARTIFACT_PATH}}" >&2
+          exit 1
+        fi
+      - |
+        REGION_VALUE="${AWS_REGION:-${AWS_DEFAULT_REGION:-}}"
+        aws lambda update-function-code \
+          --region "${REGION_VALUE}" \
+          --function-name {{.LAMBDA_FUNCTION_NAME}} \
+          --zip-file fileb://{{.ARTIFACT_PATH}}
+      - |
+        REGION_VALUE="${AWS_REGION:-${AWS_DEFAULT_REGION:-}}"
+        aws lambda wait function-updated \
+          --region "${REGION_VALUE}" \
+          --function-name {{.LAMBDA_FUNCTION_NAME}}
 
-    package:
-        desc: Package the Lambda binary into a zip artifact
-        cmds:
-            - task: build
-            - mkdir -p $(dirname {{.ARTIFACT_PATH}})
-            - rm -f {{.ARTIFACT_PATH}}
-            - zip -j {{.ARTIFACT_PATH}} {{.BIN_PATH}}
-        sources:
-            - "{{.BIN_PATH}}"
-        generates:
-            - "{{.ARTIFACT_PATH}}"
+  package:
+    desc: Package the Lambda binary into a zip artifact
+    cmds:
+      - task: build
+      - mkdir -p $(dirname {{.ARTIFACT_PATH}})
+      - rm -f {{.ARTIFACT_PATH}}
+      - zip -j {{.ARTIFACT_PATH}} {{.BIN_PATH}}
+    sources:
+      - "{{.BIN_PATH}}"
+    generates:
+      - "{{.ARTIFACT_PATH}}"
 
-    package:clean:
-        desc: Remove packaged Lambda artifacts
-        cmds:
-            - rm -f dist/*.zip
+  package:clean:
+    desc: Remove packaged Lambda artifacts
+    cmds:
+      - rm -f dist/*.zip

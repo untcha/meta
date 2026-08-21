@@ -10,48 +10,48 @@ version: "3"
 # For CLI tools use taskfiles/cli/Taskfile.yml; for AWS Lambdas use taskfiles/lambda/Taskfile.yml.
 
 includes:
-    # Shared tasks, flattened so they appear unprefixed (e.g. `task lint`).
-    #
-    # The path is relative to the DESTINATION repo root, where this file becomes
-    # Taskfile.yml beside a vendored taskfiles/common.yml. It therefore does not
-    # resolve here in the templates directory, and that is deliberate: making it
-    # ../common.yml would work here and silently escape every consuming repo.
-    common:
-        taskfile: ./taskfiles/common.yml
-        flatten: true
+  # Shared tasks, flattened so they appear unprefixed (e.g. `task lint`).
+  #
+  # The path is relative to the DESTINATION repo root, where this file becomes
+  # Taskfile.yml beside a vendored taskfiles/common.yml. It therefore does not
+  # resolve here in the templates directory, and that is deliberate: making it
+  # ../common.yml would work here and silently escape every consuming repo.
+  common:
+    taskfile: ./taskfiles/common.yml
+    flatten: true
 
-    # Repo-specific tasks live here and are namespaced (e.g. `task project:update:schema`).
-    # optional:true keeps this generic Taskfile usable in repos without a project file.
-    # Keep the file at that path: because the include is optional, a mismatch is
-    # silent — the tasks simply never appear and `task` still exits 0.
-    project:
-        taskfile: ./taskfiles/Taskfile.project.yml
-        optional: true
+  # Repo-specific tasks live here and are namespaced (e.g. `task project:update:schema`).
+  # optional:true keeps this generic Taskfile usable in repos without a project file.
+  # Keep the file at that path: because the include is optional, a mismatch is
+  # silent — the tasks simply never appear and `task` still exits 0.
+  project:
+    taskfile: ./taskfiles/Taskfile.project.yml
+    optional: true
 
 vars:
-    META_TYPE: library
+  META_TYPE: library
 
 tasks:
-    check:
-        desc: Run all checks (formatting, linting, vet, compile, tests)
-        cmds:
-            - task: fmt
-            - task: lint
-            - task: vet
-            - task: build
-            - task: test:existing
+  check:
+    desc: Run all checks (formatting, linting, vet, compile, tests)
+    cmds:
+      - task: fmt
+      - task: lint
+      - task: vet
+      - task: build
+      - task: test:existing
 
-    build:
-        desc: Compile-check all packages (libraries produce no binary)
-        cmds:
-            - go build ./...
-        sources:
-            - "**/*.go"
-            - go.mod
-            - go.sum
+  build:
+    desc: Compile-check all packages (libraries produce no binary)
+    cmds:
+      - go build ./...
+    sources:
+      - "**/*.go"
+      - go.mod
+      - go.sum
 
-    clean:all:
-        desc: Clean everything (caches, coverage)
-        cmds:
-            - task: clean:caches
-            - task: clean:coverage
+  clean:all:
+    desc: Clean everything (caches, coverage)
+    cmds:
+      - task: clean:caches
+      - task: clean:coverage
