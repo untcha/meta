@@ -64,6 +64,19 @@ linters:
     #                 - (io.Closer).Close
     presets:
       - std-error-handling
+    #
+    # `rules` narrows individual linters to part of the tree. The usual case is
+    # a project-specific linter that is deliberately unenforced in tests — e.g.
+    # a forbidigo rule guarding a secret-revealing accessor, which the tests for
+    # that accessor must obviously be allowed to call:
+    #
+    #     rules:
+    #         - path: _test\.go
+    #           linters:
+    #               - forbidigo
+    #
+    # Left commented out because it names a linter this base config does not
+    # enable; uncomment and adapt in the repo that needs it.
 
 formatters:
   # Enable specific formatter.
