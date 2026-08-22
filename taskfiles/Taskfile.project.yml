@@ -1,0 +1,60 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+# Source: https://github.com/untcha/meta (taskfiles/Taskfile.project.yml)
+# Stub for repo-specific tasks. Copy it to taskfiles/Taskfile.project.yml in the
+# consuming repo, retitle the header for that project, and add tasks below.
+#
+# Ship this file even when a repo has no project tasks yet. The project-type
+# Taskfiles include it with `optional: true`, which means a missing file or a
+# mistyped path is SILENT — the tasks simply never appear and `task` still exits
+# 0. Keeping the stub at the expected path means the first task added shows up
+# immediately, instead of the include quietly pointing at nothing.
+#
+# Two things to know when writing tasks here:
+#
+#   1. This file is included UNDER a namespace, so tasks run as
+#      `task project:<name>` (e.g. `task project:deploy`), and a `task: build`
+#      reference inside it resolves to a task in THIS file. To call a task from
+#      the root Taskfile or from common.yml, prefix it with a colon:
+#      `task: :lint`, `task: :build`, `deps: [":build"]`.
+#
+#   2. Vars from the root Taskfile ARE visible here — BIN_NAME, APP_NAME,
+#      BIN_DIR, RELEASE_TARGETS and friends resolve without being passed in.
+#      (Verified against Task 3.53.1; some repos carry a redundant
+#      `vars: {BIN_NAME: "{{.BIN_NAME}}"}` on the include, which is not needed.)
+
+tasks: {}
+# Example — the upload half of a release pipeline.
+# `build:all` and RELEASE_TARGETS live in the cli Taskfile, so this file only
+# needs the part that is genuinely project-specific:
+#
+#     vars:
+#         S3_BUCKET: "acme-artifacts"
+#         S3_PREFIX: "{{.BIN_NAME}}"
+#
+#         # VERSION labels the S3 key path. Latest git tag, else short commit;
+#         # "-dirty" when the tree has uncommitted changes, "dev" outside a repo.
+#         VERSION:
+#             sh: git describe --tags --always --dirty 2>/dev/null || echo dev
+#
+#     tasks:
+#         upload:s3:
+#             desc: "Upload binaries to s3://{{.S3_BUCKET}}/{{.S3_PREFIX}}"
+#             preconditions:
+#                 - sh: "command -v aws >/dev/null 2>&1"
+#                   msg: "aws CLI not found on PATH — install it."
+#             cmds:
+#                 - for: { var: RELEASE_TARGETS }
+#                   cmd: >-
+#                     OSARCH="{{.ITEM | splitList "/" | first}}-{{.ITEM | splitList "/" | last}}";
+#                     test -f "bin/${OSARCH}/{{.BIN_NAME}}" || {
+#                       echo "missing bin/${OSARCH}/{{.BIN_NAME}} — run 'task build:all' first" >&2; exit 1;
+#                     };
+#                     aws s3 cp "bin/${OSARCH}/{{.BIN_NAME}}" "s3://{{.S3_BUCKET}}/{{.S3_PREFIX}}/{{.VERSION}}/${OSARCH}/{{.BIN_NAME}}";
+#
+#         deploy:
+#             desc: "Cross-compile all release targets and upload them"
+#             cmds:
+#                 - task: :build:all
+#                 - task: upload:s3
