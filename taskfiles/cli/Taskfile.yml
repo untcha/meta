@@ -53,6 +53,10 @@ vars:
   BIN_DIR: "bin/{{.TARGET_OS}}-{{.TARGET_ARCH}}"
   BIN_PATH: "{{.BIN_DIR}}/{{.BIN_NAME}}"
 
+  # RELEASE_TARGETS is the OS/ARCH matrix that `build:all` cross-compiles.
+  # Whitespace-separated "os/arch" tokens (Task splits the list on whitespace).
+  RELEASE_TARGETS: "linux/amd64 darwin/arm64 darwin/amd64"
+
   # APPMETA_DIR is the package whose vars get stamped with version/commit/date.
   # Build stamping only happens when this directory exists (see LDFLAGS).
   APPMETA_DIR: internal/appmeta
@@ -97,6 +101,23 @@ tasks:
     generates:
       - "{{.BIN_PATH}}"
 
+  build:all:
+    desc: Build the binary for all release targets ({{.RELEASE_TARGETS}})
+    summary: |
+      Cross-compiles `build` once per entry in RELEASE_TARGETS, leaving each
+      artifact in its own bin/<os>-<arch>/ directory.
+
+      The target is handed over as TARGET_OS/TARGET_ARCH environment variables
+      because the vars above read `{{`{{default .GOOS .TARGET_OS}}`}}`, so an
+      env override wins over the host defaults without duplicating the build
+      command per platform.
+    cmds:
+      - for: { var: RELEASE_TARGETS }
+        cmd: >-
+          TARGET_OS={{.ITEM | splitList "/" | first}}
+          TARGET_ARCH={{.ITEM | splitList "/" | last}}
+          task build
+
   build:check:
     desc: Run checks, then build the binary
     cmds:
@@ -129,7 +150,21 @@ tasks:
       - task: clean
       - task: build
       - mkdir -p {{.LOCAL_BIN}}
-      - cp {{.BIN_PATH}} {{.LOCAL_BIN}}/{{.BIN_NAME}}
+      # Install atomically instead of with a plain `cp`. `cp` opens the
+      # destination with O_TRUNC and writes into the EXISTING inode, so a copy
+      # of this binary that happens to be running has its mapped pages changed
+      # underneath it and dies on the next page fault — which for a daemon also
+      # means its deferred cleanup (pid files, sockets) never runs. Copying
+      # beside the target and renaming over it binds the name to a new inode and
+      # leaves the old one alive for whoever still has it open. Both paths are
+      # in LOCAL_BIN, so `mv` is a rename(2) and therefore atomic.
+      #
+      # Chained with && so the rename cannot run on a failed copy. An install
+      # interrupted between the two still leaves a `.new` file behind, which is
+      # why `dev:clean` removes that too.
+      - cmd: >-
+          cp {{.BIN_PATH}} {{.LOCAL_BIN}}/{{.BIN_NAME}}.new &&
+          mv -f {{.LOCAL_BIN}}/{{.BIN_NAME}}.new {{.LOCAL_BIN}}/{{.BIN_NAME}}
       - echo "Installed '{{.BIN_NAME}}' to '{{.LOCAL_BIN}}/'"
       - echo "Make sure '{{.LOCAL_BIN}}' is in your PATH"
 
@@ -142,6 +177,11 @@ tasks:
     desc: Clean the development installation
     cmds:
       - rm -f {{.LOCAL_BIN}}/{{.BIN_NAME}}
+      # Also drop a stray `.new` left by an install interrupted between the
+      # copy and the rename (see dev:install).
+      - rm -f {{.LOCAL_BIN}}/{{.BIN_NAME}}.new
     preconditions:
-      - sh: test -f {{.LOCAL_BIN}}/{{.BIN_NAME}}
+      # Either file counts as something to clean, so a leftover `.new` can be
+      # removed even when no binary is installed.
+      - sh: test -f {{.LOCAL_BIN}}/{{.BIN_NAME}} || test -f {{.LOCAL_BIN}}/{{.BIN_NAME}}.new
         msg: "'{{.BIN_NAME}}' not found in '{{.LOCAL_BIN}}'. Nothing to clean."
