@@ -10,6 +10,19 @@ tmp/
 ### Taskfile ###
 .task
 
+### Superpowers ###
+
+# Agent scratch space (brainstorming, subagent-driven development). Local-only.
+# Superpowers itself drops a `*` .gitignore into .superpowers/sdd/, but that
+# covers only that subtree — ignore the whole directory here.
+.superpowers/
+
+### Graphify ###
+
+# Knowledge graph is local-only build output; never tracked.
+graphify-out/
+.graphify/
+
 # Created by https://www.toptal.com/developers/gitignore/api/go,macos,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=go,macos,visualstudiocode
 
