@@ -26,17 +26,13 @@ version: "3"
 
 tasks: {}
 # Example — the upload half of a release pipeline.
-# `build:all` and RELEASE_TARGETS live in the cli Taskfile, so this file only
-# needs the part that is genuinely project-specific:
+# `build:all`, RELEASE_TARGETS and BUILD_VERSION (the version the binaries
+# are stamped with) live in the cli Taskfile, so this file only needs the
+# part that is genuinely project-specific:
 #
 #     vars:
 #         S3_BUCKET: "acme-artifacts"
 #         S3_PREFIX: "{{.BIN_NAME}}"
-#
-#         # VERSION labels the S3 key path. Latest git tag, else short commit;
-#         # "-dirty" when the tree has uncommitted changes, "dev" outside a repo.
-#         VERSION:
-#             sh: git describe --tags --always --dirty 2>/dev/null || echo dev
 #
 #     tasks:
 #         upload:s3:
@@ -51,7 +47,7 @@ tasks: {}
 #                     test -f "bin/${OSARCH}/{{.BIN_NAME}}" || {
 #                       echo "missing bin/${OSARCH}/{{.BIN_NAME}} — run 'task build:all' first" >&2; exit 1;
 #                     };
-#                     aws s3 cp "bin/${OSARCH}/{{.BIN_NAME}}" "s3://{{.S3_BUCKET}}/{{.S3_PREFIX}}/{{.VERSION}}/${OSARCH}/{{.BIN_NAME}}";
+#                     aws s3 cp "bin/${OSARCH}/{{.BIN_NAME}}" "s3://{{.S3_BUCKET}}/{{.S3_PREFIX}}/{{.BUILD_VERSION}}/${OSARCH}/{{.BIN_NAME}}";
 #
 #         deploy:
 #             desc: "Cross-compile all release targets and upload them"
