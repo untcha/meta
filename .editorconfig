@@ -1,0 +1,12 @@
+# EditorConfig
+# shfmt (run by Zed via bash-language-server on save, or from the shell)
+# reads this file, so every caller formats the same way.
+root = true
+
+# shfmt style for all shell and zsh files: two-space indent, "> file"
+# instead of ">file", and indented patterns inside case ... esac.
+[*.{sh,zsh}]
+indent_style = space
+indent_size = 2
+space_redirects = true
+switch_case_indent = true

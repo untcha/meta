@@ -48,17 +48,17 @@ trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/cache"
 ROWS="$tmp/rows"           # repo  path  type  status  details
 TASK_ROWS="$tmp/task_rows" # repo  path  task  desc
-: >"$ROWS"
-: >"$TASK_ROWS"
+: > "$ROWS"
+: > "$TASK_ROWS"
 
-have_yq() { command -v yq >/dev/null 2>&1; }
+have_yq() { command -v yq > /dev/null 2>&1; }
 
 # fetch META_PATH -> prints the cached local copy; each meta file is fetched once
 # per run, however many repos are checked.
 fetch() {
   local mp="$1" out="$tmp/cache/${1//\//__}"
   if [ ! -f "$out" ]; then
-    curl -fsSL "$META_RAW/$mp" -o "$out" 2>/dev/null || {
+    curl -fsSL "$META_RAW/$mp" -o "$out" 2> /dev/null || {
       rm -f "$out"
       return 1
     }
@@ -69,12 +69,12 @@ fetch() {
 # join DIR FILE -> FILE relative to the repo root ("." is the root itself).
 join() { if [ "$1" = . ]; then printf '%s' "$2"; else printf '%s/%s' "$1" "$2"; fi; }
 
-row() { printf '%s\t%s\t%s\t%s\t%s\n' "$@" >>"$ROWS"; }
+row() { printf '%s\t%s\t%s\t%s\t%s\n' "$@" >> "$ROWS"; }
 
 # list_named NAME -> repo-relative paths of files called NAME, sorted. Runs from
 # the repo root; outside git it falls back to find, pruning the usual noise.
 list_named() {
-  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  if git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
     git ls-files -co --exclude-standard -- "*$1" | grep -E "(^|/)$1\$" || true
   else
     find . \( -name .git -o -name .terraform -o -name node_modules -o -name vendor \) -prune \
@@ -84,24 +84,24 @@ list_named() {
 
 tf_type() {
   if have_yq; then
-    yq '.includes.common.vars.META_TYPE // .vars.META_TYPE // ""' "$1" 2>/dev/null || true
+    yq '.includes.common.vars.META_TYPE // .vars.META_TYPE // ""' "$1" 2> /dev/null || true
   else
-    grep -E '^[[:space:]]*META_TYPE:' "$1" 2>/dev/null | head -1 |
+    grep -E '^[[:space:]]*META_TYPE:' "$1" 2> /dev/null | head -1 |
       sed -E 's/.*META_TYPE:[[:space:]]*//; s/[[:space:]]*#.*//; s/["'\'']//g' || true
   fi
 }
 
 tf_common() {
   if have_yq; then
-    yq '.includes.common.taskfile // ""' "$1" 2>/dev/null || true
+    yq '.includes.common.taskfile // ""' "$1" 2> /dev/null || true
   else
-    grep -E '^[[:space:]]*taskfile:[[:space:]]*\S*common\.yml' "$1" 2>/dev/null |
+    grep -E '^[[:space:]]*taskfile:[[:space:]]*\S*common\.yml' "$1" 2> /dev/null |
       head -1 | sed -E 's/.*taskfile:[[:space:]]*//; s/[[:space:]]*#.*//' || true
   fi
 }
 
 is_managed() {
-  grep -qE '^[[:space:]]*META_TYPE:' "$1" 2>/dev/null || [ -n "$(tf_common "$1")" ]
+  grep -qE '^[[:space:]]*META_TYPE:' "$1" 2> /dev/null || [ -n "$(tf_common "$1")" ]
 }
 
 # check LOCAL META MODE(exact|novars) REQUIRED(yes|no) — diffs one file and
@@ -125,13 +125,13 @@ check() {
     return 0
   fi
   if [ "$mode" = novars ] && have_yq; then
-    yq "$NORMALIZE" "$lp" >"$tmp/l"
-    yq "$NORMALIZE" "$remote" >"$tmp/r"
+    yq "$NORMALIZE" "$lp" > "$tmp/l"
+    yq "$NORMALIZE" "$remote" > "$tmp/r"
   else
     cp "$lp" "$tmp/l"
     cp "$remote" "$tmp/r"
   fi
-  if ! diff -u "$tmp/r" "$tmp/l" >"$tmp/d"; then
+  if ! diff -u "$tmp/r" "$tmp/l" > "$tmp/d"; then
     printf '\n=== drift: %s  vs  meta/%s ===\n' "$lp" "$mp"
     sed -e "s| $tmp/r| meta/$mp|" -e "s| $tmp/l| $lp|" "$tmp/d"
     drift=1
@@ -161,12 +161,12 @@ list_project_tasks() {
     return 0
   fi
   printf -- '-- project tasks (%s):\n' "$pf"
-  yq '.tasks // {} | to_entries | .[] | .key + "\t" + (.value.desc // "")' "$pf" 2>/dev/null >"$tmp/tasks" || : >"$tmp/tasks"
+  yq '.tasks // {} | to_entries | .[] | .key + "\t" + (.value.desc // "")' "$pf" 2> /dev/null > "$tmp/tasks" || : > "$tmp/tasks"
   [ -s "$tmp/tasks" ] || echo "   (none defined)"
   while IFS="$(printf '\t')" read -r name desc; do
     printf '   %-24s %s\n' "$name" "$desc"
-    printf '%s\t%s\t%s\t%s\n' "$repo" "$t" "$name" "${desc:--}" >>"$TASK_ROWS"
-  done <"$tmp/tasks"
+    printf '%s\t%s\t%s\t%s\n' "$repo" "$t" "$name" "${desc:--}" >> "$TASK_ROWS"
+  done < "$tmp/tasks"
 }
 
 # check_target REPO TARGET TYPE — checks one meta-managed Taskfile and its
@@ -186,20 +186,20 @@ check_target() {
     fi
   fi
   case "$type" in
-  cli | library | lambda) ;;
-  *)
-    echo "meta-check: $tf: could not determine type (cli|library|lambda)" >&2
-    row "$repo" "$t" "?" error "unknown type '$type'"
-    return 2
-    ;;
+    cli | library | lambda) ;;
+    *)
+      echo "meta-check: $tf: could not determine type (cli|library|lambda)" >&2
+      row "$repo" "$t" "?" error "unknown type '$type'"
+      return 2
+      ;;
   esac
   printf '\n### %s   (type: %s, meta ref: %s)\n' "$tf" "$type" "$META_REF"
 
   check "$tf" "taskfiles/${type}/Taskfile.yml" novars yes
   common="$(tf_common "$tf")"
   case "$common" in
-  http* | "") ;; # remote include or none
-  *) check "$(join "$t" "${common#./}")" "taskfiles/common.yml" exact yes ;;
+    http* | "") ;; # remote include or none
+    *) check "$(join "$t" "${common#./}")" "taskfiles/common.yml" exact yes ;;
   esac
   for f in "${SHARED_FILES[@]}"; do
     check "$(join "$t" "$f")" "$f" exact no
@@ -273,7 +273,7 @@ check_repo() (
   local targets=()
   cd "$1" || return 2
   here="$(pwd -P)"
-  root="$(git rev-parse --show-toplevel 2>/dev/null)" || root="$here"
+  root="$(git rev-parse --show-toplevel 2> /dev/null)" || root="$here"
   cd "$root" || return 2
   repo="${3:-$(basename "$root")}"
 
@@ -337,15 +337,21 @@ check_dir() {
     rc=0
     check_repo "$d" "" "$name" 2>&1 || rc=$?
     case "$rc" in
-    1) drifted=1 ;;
-    2) errored=1 ;;
+      1) drifted=1 ;;
+      2) errored=1 ;;
     esac
   done
   printf '\n##### summary   (meta ref: %s)\n' "$META_REF"
-  { printf 'REPO\tPATH\tTYPE\tSTATUS\tDETAILS\n'; cat "$ROWS"; } | table
+  {
+    printf 'REPO\tPATH\tTYPE\tSTATUS\tDETAILS\n'
+    cat "$ROWS"
+  } | table
   if [ -s "$TASK_ROWS" ]; then
     printf '\n##### project tasks (taskfiles/Taskfile.project.yml)\n'
-    { printf 'REPO\tPATH\tTASK\tDESC\n'; cat "$TASK_ROWS"; } | table
+    {
+      printf 'REPO\tPATH\tTASK\tDESC\n'
+      cat "$TASK_ROWS"
+    } | table
   fi
   [ "$errored" = 1 ] && return 2
   [ "$drifted" = 1 ] && return 1
@@ -355,26 +361,26 @@ check_dir() {
 type="" dir="" path="."
 while [ $# -gt 0 ]; do
   case "$1" in
-  --type)
-    [ $# -ge 2 ] || usage
-    type="$2"
-    shift 2
-    ;;
-  --dir)
-    [ $# -ge 2 ] || usage
-    dir="$2"
-    shift 2
-    ;;
-  -h | --help) usage ;;
-  cli | library | lambda) # legacy positional type
-    type="$1"
-    shift
-    ;;
-  -*) usage ;;
-  *)
-    path="$1"
-    shift
-    ;;
+    --type)
+      [ $# -ge 2 ] || usage
+      type="$2"
+      shift 2
+      ;;
+    --dir)
+      [ $# -ge 2 ] || usage
+      dir="$2"
+      shift 2
+      ;;
+    -h | --help) usage ;;
+    cli | library | lambda) # legacy positional type
+      type="$1"
+      shift
+      ;;
+    -*) usage ;;
+    *)
+      path="$1"
+      shift
+      ;;
   esac
 done
 
