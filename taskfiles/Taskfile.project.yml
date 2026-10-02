@@ -21,7 +21,7 @@ version: "3"
 #
 #   2. Vars from the root Taskfile ARE visible here — BIN_NAME, APP_NAME,
 #      BIN_DIR, RELEASE_TARGETS and friends resolve without being passed in.
-#      (Verified against Task 3.53.1; some repos carry a redundant
+#      (Verified against Task 3.53.1 and 3.54.0; some repos carry a redundant
 #      `vars: {BIN_NAME: "{{.BIN_NAME}}"}` on the include, which is not needed.)
 
 tasks: {}
@@ -33,6 +33,10 @@ tasks: {}
 #     vars:
 #         S3_BUCKET: "acme-artifacts"
 #         S3_PREFIX: "{{.BIN_NAME}}"
+#         # Key path between the prefix and the OS/ARCH directory. Prepend
+#         # "{{.BUILD_DATE}}/" to keep every upload of a version instead of
+#         # overwriting the previous one.
+#         S3_VERSION_PATH: "{{.BUILD_VERSION}}"
 #
 #     tasks:
 #         upload:s3:
@@ -47,7 +51,7 @@ tasks: {}
 #                     test -f "bin/${OSARCH}/{{.BIN_NAME}}" || {
 #                       echo "missing bin/${OSARCH}/{{.BIN_NAME}} — run 'task build:all' first" >&2; exit 1;
 #                     };
-#                     aws s3 cp "bin/${OSARCH}/{{.BIN_NAME}}" "s3://{{.S3_BUCKET}}/{{.S3_PREFIX}}/{{.BUILD_VERSION}}/${OSARCH}/{{.BIN_NAME}}";
+#                     aws s3 cp "bin/${OSARCH}/{{.BIN_NAME}}" "s3://{{.S3_BUCKET}}/{{.S3_PREFIX}}/{{.S3_VERSION_PATH}}/${OSARCH}/{{.BIN_NAME}}";
 #
 #         deploy:
 #             desc: "Cross-compile all release targets and upload them"
