@@ -41,7 +41,10 @@ vars:
   CGO: CGO_ENABLED=0
   GOHOST: "GOOS={{.TARGET_OS}} GOARCH={{.TARGET_ARCH}}"
 
-  BIN_DIR: "bin/{{.TARGET_OS}}-{{.TARGET_ARCH}}"
+  # Local builds go under dist/, never bin/. The Terraform builder module owns
+  # bin/ and zips that whole directory, so anything else left there would end up
+  # inside the Lambda package.
+  BIN_DIR: "dist/{{.TARGET_OS}}-{{.TARGET_ARCH}}"
   BIN_PATH: "{{.BIN_DIR}}/{{.BIN_NAME}}"
 
   ARTIFACT_PATH: '{{default (printf "dist/%s-%s-%s.zip" .APP_NAME .TARGET_OS .TARGET_ARCH) .ARTIFACT_PATH}}'
@@ -79,7 +82,7 @@ tasks:
     desc: Build the Lambda binary for the target OS/ARCH
     cmds:
       - mkdir -p {{.BIN_DIR}}
-      - "{{.CGO}} {{.GOHOST}} go build -a -trimpath -ldflags='{{.LDFLAGS}}' -o {{.BIN_PATH}} cmd/{{.APP_NAME}}/main.go"
+      - "{{.CGO}} {{.GOHOST}} go build -a -trimpath -ldflags='{{.LDFLAGS}}' -o {{.BIN_PATH}} ./cmd"
     sources:
       - "**/*.go"
       - go.mod
@@ -104,6 +107,8 @@ tasks:
     desc: Clean temp files and folders
     cmds:
       - rm -rf ./dist/
+      # bin/ is written by the Terraform builder module, not by this Taskfile.
+      # Removing it is safe: the next plan finds no binary and rebuilds.
       - rm -rf ./bin/
 
   clean:all:
