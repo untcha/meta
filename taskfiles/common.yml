@@ -25,10 +25,19 @@ tasks:
       - task --list-all
     silent: true
 
+  # Formatters (gofmt, goimports, golines) are configured in .golangci.yml, so
+  # `fmt` and `lint` always agree on what "formatted" means. golines can move a
+  # trailing //nolint onto a different line when it wraps a statement; put long
+  # directives on their own line above the statement instead.
   fmt:
-    desc: Format Go code
+    desc: Format Go code (formatters from .golangci.yml)
     cmds:
-      - go fmt ./...
+      - golangci-lint fmt
+
+  fmt:check:
+    desc: Fail if any file needs formatting (writes nothing; for CI)
+    cmds:
+      - golangci-lint fmt --diff
 
   vet:
     desc: Run go vet
@@ -44,11 +53,6 @@ tasks:
     desc: Run golangci-lint with verbose output
     cmds:
       - golangci-lint run -v
-
-  lint:fmt:
-    desc: Run golangci-lint formatter
-    cmds:
-      - golangci-lint fmt
 
   deps:
     desc: Download and verify dependencies
