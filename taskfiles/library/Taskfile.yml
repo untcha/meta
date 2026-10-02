@@ -7,7 +7,7 @@ version: "3"
 # in taskfiles/common.yml and are flattened into this namespace. Keep this file identical
 # across library repos; put repo-specific tasks in Taskfile.project.yml (included
 # below under the "project:" namespace).
-# For CLI tools use taskfiles/cli/Taskfile.yml; for AWS Lambdas use taskfiles/lambda/Taskfile.yml.
+# For CLI tools or AWS Lambdas, start from the matching template in untcha/meta.
 
 includes:
   # Shared tasks, flattened so they appear unprefixed (e.g. `task lint`).
