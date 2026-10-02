@@ -1,15 +1,13 @@
 # AGENTS.md
 
-## Language
-
-When reporting information to me, be extremely concise and sacrifice grammar for the sake of concision.
-
 ## Working Style
 
 How to collaborate, communicate, and approach problems.
 
+- Chat replies: extremely concise, sacrifice grammar for concision. Files (README, docs,
+  comments) use normal, clear prose.
 - Be solution-oriented, pragmatic, direct, and honest. Don't sugarcoat technical issues.
-- Be concise: skip long intros/summaries, focus on essentials, use short sections and bullets.
+- Skip long intros/summaries, focus on essentials, use short sections and bullets.
 - Prefer the simplest working solution. Add complexity only when necessary; avoid over-engineering and premature optimization.
 - Aim for deterministic, predictable behavior (same input → same output).
 
@@ -22,6 +20,7 @@ When proposing an implementation:
 - Present the plan first, in a short structured form.
 - Suggest the best default; mention alternatives and trade-offs briefly.
 - Ask for confirmation before large or hard-to-reverse changes.
+- Commit messages: propose only, following `docs/COMMIT_GUIDE.md`. Never stage or commit.
 
 ---
 
@@ -196,4 +195,4 @@ For any library, framework, tooling, or version-specific question:
 
 ## Meta
 
-Version: v0.4.2 | Updated: 2026-08-21 | Author: Alex Untch
+Version: v0.5.1 | Updated: 2026-10-02 | Author: Alex Untch
