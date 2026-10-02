@@ -18,6 +18,10 @@ vars:
   COVERAGE_FILE: "{{.COVERAGE_DIR}}/coverage.out"
   COVERAGE_HTML: "{{.COVERAGE_DIR}}/coverage.html"
 
+  # Pinned govulncheck version for `vuln`. Bump it here; every repo picks the
+  # new version up with its next copy of this file.
+  GOVULNCHECK_VERSION: v1.8.0
+
 tasks:
   default:
     desc: Default task - show available tasks
@@ -53,6 +57,14 @@ tasks:
     desc: Run golangci-lint with verbose output
     cmds:
       - golangci-lint run -v
+
+  # `go run pkg@version` instead of a `tool` directive in go.mod: the version
+  # is pinned and checksum-verified, and a library doesn't pass a dev tool's
+  # dependencies on to the modules that import it.
+  vuln:
+    desc: Scan dependencies for known vulnerabilities (pinned govulncheck)
+    cmds:
+      - go run golang.org/x/vuln/cmd/govulncheck@{{.GOVULNCHECK_VERSION}} ./...
 
   deps:
     desc: Download and verify dependencies
