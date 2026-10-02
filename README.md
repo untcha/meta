@@ -8,6 +8,7 @@ This repo contains Alex's meta configuration files:
 - `.golangci.yml` configuration
 - `LICENSE` template
 - `Taskfile.yml` templates (see [Taskfiles](#taskfiles))
+- `meta-check` skill for drift checks (see [Drift check](#drift-check))
 
 ## Taskfiles
 
@@ -87,6 +88,31 @@ taskfiles/
 > [!NOTE]
 > A future iteration may load `common.yml` via a remote (URL) include so
 > projects always track the latest shared tasks without copying.
+
+## Drift check
+
+Copied files drift as this repo evolves. The `skills/meta-check` skill checks a
+repo, or every repo in a folder, against the current templates and reports what
+is behind, what is a deliberate local extension, and which repo-specific tasks
+are worth reusing elsewhere. Make it available in every project by linking it
+into your personal skills directory:
+
+```sh
+ln -s "$PWD/skills/meta-check" ~/.claude/skills/meta-check
+```
+
+Then ask Claude Code to "check this repo for meta drift" from any repo, or to
+check a whole folder of repos. The comparison itself is a plain script you can
+also run directly:
+
+```sh
+bash skills/meta-check/scripts/meta-check.sh [--type cli|library|lambda] [PATH]
+bash skills/meta-check/scripts/meta-check.sh --dir ~/src
+```
+
+It compares against `main` on GitHub (`META_REF` selects another branch or tag),
+so changes here only count once they are pushed. `LICENSE` is not checked:
+licenses legitimately differ per repo.
 
 ## Credit
 
