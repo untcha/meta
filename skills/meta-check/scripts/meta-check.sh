@@ -12,8 +12,10 @@
 # checked; run from the repo root, all of them are.
 #
 # Per target:  Taskfile.yml vs its type template (project vars blanked),
-#              the vendored common.yml, the shared files below if present, and
-#              the tasks in taskfiles/Taskfile.project.yml (listed, never diffed).
+#              the vendored common.yml, the shared files below if present,
+#              internal/appmeta vs meta's appmeta/ if present (cli and lambda
+#              only), and the tasks in taskfiles/Taskfile.project.yml (listed,
+#              never diffed).
 # Per repo:    the shared files at the repo root, once.
 #
 # The project type comes from the Taskfile's META_TYPE var, so the Taskfiles
@@ -30,6 +32,10 @@ META_RAW="${META_RAW:-https://raw.githubusercontent.com/untcha/meta/${META_REF}}
 
 # Type-independent files, checked only if present. Same path locally and in meta.
 SHARED_FILES=(".gitignore" ".golangci.yml" "AGENTS.md" "docs/COMMIT_GUIDE.md")
+
+# Build metadata package: internal/appmeta/<file> locally, appmeta/<file> in meta.
+# Checked only if present: the Taskfiles build without it.
+APPMETA_FILES=("appmeta.go" "appmeta_test.go")
 
 # Values you fill in per project — blanked on both sides before diffing the
 # typed Taskfile, so only real task/structure drift shows (needs yq; without it
@@ -206,6 +212,15 @@ check_target() {
   done
   # Below the root the shared files normally live at the repo root instead.
   [ "$t" = . ] || absent=""
+  # appmeta lives in each module. Only the cli and lambda Taskfiles stamp it;
+  # a library has no binary.
+  case "$type" in
+    cli | lambda)
+      for f in "${APPMETA_FILES[@]}"; do
+        check "$(join "$t" "internal/appmeta/$f")" "appmeta/$f" exact no
+      done
+      ;;
+  esac
   report_coverage
   list_project_tasks "$repo" "$t"
 

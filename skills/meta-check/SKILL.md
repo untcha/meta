@@ -1,6 +1,6 @@
 ---
 name: meta-check
-description: Use when checking whether a repo, or every repo in a folder, has drifted from the untcha/meta templates (Taskfile.yml, taskfiles/common.yml, .gitignore, .golangci.yml, AGENTS.md, docs/COMMIT_GUIDE.md), when asked about "meta drift" or being "out of sync with meta", or when asked which repo-specific tasks could be reused in other repos.
+description: Use when checking whether a repo, or every repo in a folder, has drifted from the untcha/meta templates (Taskfile.yml, taskfiles/common.yml, .gitignore, .golangci.yml, AGENTS.md, docs/COMMIT_GUIDE.md, internal/appmeta), when asked about "meta drift" or being "out of sync with meta", or when asked which repo-specific tasks could be reused in other repos.
 ---
 
 # meta-check
@@ -64,8 +64,10 @@ these parts, in this order:
 ## Scope
 
 The script's file set is the scope. `LICENSE` is excluded on purpose, because
-licenses legitimately differ per repo. Go code and layout are not part of a
-drift check. Meta content comes from GitHub at `META_REF`, so unpushed changes in
+licenses legitimately differ per repo. The only Go code checked is
+`internal/appmeta`, for cli and lambda targets that have it; a missing package
+is not drift, because the Taskfiles build without it. Other Go code and layout
+are not part of a drift check. Meta content comes from GitHub at `META_REF`, so unpushed changes in
 a local meta clone are invisible to the check — say so when the user is editing
 meta.
 

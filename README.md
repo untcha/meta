@@ -128,7 +128,8 @@ bash skills/meta-check/scripts/meta-check.sh --dir ~/src
 
 It compares against `main` on GitHub (`META_REF` selects another branch or tag),
 so changes here only count once they are pushed. `LICENSE` is not checked:
-licenses legitimately differ per repo.
+licenses legitimately differ per repo. `internal/appmeta` is checked against
+`appmeta/` for `cli` and `lambda` projects that have it.
 
 ## Credit
 
