@@ -8,6 +8,7 @@ This repo contains Alex's meta configuration files:
 - `.golangci.yml` configuration
 - `LICENSE` template
 - `Taskfile.yml` templates (see [Taskfiles](#taskfiles))
+- `appmeta` build metadata package (see [appmeta](#appmeta))
 - `meta-check` skill for drift checks (see [Drift check](#drift-check))
 
 ## Taskfiles
@@ -88,6 +89,21 @@ taskfiles/
 > [!NOTE]
 > A future iteration may load `common.yml` via a remote (URL) include so
 > projects always track the latest shared tasks without copying.
+
+## appmeta
+
+The `appmeta/` directory holds the build metadata package that the `cli` and
+`lambda` Taskfiles stamp via `-ldflags`. Copy it into the target repo:
+
+```sh
+# from the target repo root
+mkdir -p internal/appmeta
+cp /path/to/meta/appmeta/*.go ./internal/appmeta/
+```
+
+When nothing was stamped, `Version` falls back to the module version Go embeds
+in the binary, so `go install module@vX.Y.Z` reports the tag instead of `dev`.
+A build with `-buildvcs=false` still reports `dev`.
 
 ## Drift check
 
