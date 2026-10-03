@@ -23,12 +23,34 @@
 #
 # Type resolution:  --type  ->  Taskfile.yml (META_TYPE)  ->  auto-detect by content
 # Env:  META_REF (branch/tag, default main)   META_RAW (full base URL override)
+#       META_REF is resolved to a commit first (see resolve_ref); the headers
+#       show both, e.g. "main @ 067a297".
 # Exit: 0 in sync, 1 drift, 2 error (unknown type, fetch failed), 3 not meta-managed.
 #       In --dir mode: 2 if any repo errored, else 1 if any drifted, else 0.
 set -euo pipefail
 
 META_REF="${META_REF:-main}"
-META_RAW="${META_RAW:-https://raw.githubusercontent.com/untcha/meta/${META_REF}}"
+META_GIT="https://github.com/untcha/meta"
+
+# resolve_ref REF -> the commit REF points to now, or nothing if the lookup
+# fails (offline, unknown ref, REF already a commit). Prefers the peeled
+# `^{}` line, so an annotated tag yields its commit, not the tag object.
+resolve_ref() {
+  git ls-remote "$META_GIT" "$1" "$1^{}" 2> /dev/null |
+    awk '{ if (!first) first = $1; if ($2 ~ /\^\{\}$/) peeled = $1 }
+         END { print (peeled ? peeled : first) }'
+}
+
+# Fetch by commit, not by branch: raw.githubusercontent.com caches branch URLs
+# for up to 5 minutes, so a check right after a push could compare against the
+# old files. A commit URL never changes content, and one commit for the whole
+# run means every file comes from the same meta version.
+META_LABEL="$META_REF"
+if [ -z "${META_RAW:-}" ]; then
+  META_SHA="$(resolve_ref "$META_REF" || true)"
+  [ -z "$META_SHA" ] || META_LABEL="$META_REF @ ${META_SHA:0:7}"
+  META_RAW="https://raw.githubusercontent.com/untcha/meta/${META_SHA:-$META_REF}"
+fi
 
 # Type-independent files, checked only if present. Same path locally and in meta.
 SHARED_FILES=(".gitignore" ".golangci.yml" "AGENTS.md" "docs/COMMIT_GUIDE.md")
@@ -199,7 +221,7 @@ check_target() {
       return 2
       ;;
   esac
-  printf '\n### %s   (type: %s, meta ref: %s)\n' "$tf" "$type" "$META_REF"
+  printf '\n### %s   (type: %s, meta ref: %s)\n' "$tf" "$type" "$META_LABEL"
 
   check "$tf" "taskfiles/${type}/Taskfile.yml" novars yes
   common="$(tf_common "$tf")"
@@ -241,7 +263,7 @@ check_target() {
 # root is not itself a target (monorepos, Terraform modules with a Lambda).
 check_root_files() {
   local repo="$1" f drift=0 failed=0 drifted="" checked="" absent=""
-  printf '\n### repo root shared files   (meta ref: %s)\n' "$META_REF"
+  printf '\n### repo root shared files   (meta ref: %s)\n' "$META_LABEL"
   for f in "${SHARED_FILES[@]}"; do
     check "$f" "$f" exact no
   done
@@ -356,7 +378,7 @@ check_dir() {
       2) errored=1 ;;
     esac
   done
-  printf '\n##### summary   (meta ref: %s)\n' "$META_REF"
+  printf '\n##### summary   (meta ref: %s)\n' "$META_LABEL"
   {
     printf 'REPO\tPATH\tTYPE\tSTATUS\tDETAILS\n'
     cat "$ROWS"

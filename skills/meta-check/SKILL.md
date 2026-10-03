@@ -67,7 +67,8 @@ The script's file set is the scope. `LICENSE` is excluded on purpose, because
 licenses legitimately differ per repo. The only Go code checked is
 `internal/appmeta`, for cli and lambda targets that have it; a missing package
 is not drift, because the Taskfiles build without it. Other Go code and layout
-are not part of a drift check. Meta content comes from GitHub at `META_REF`, so unpushed changes in
+are not part of a drift check. Meta content comes from GitHub at `META_REF`, pinned to its current commit
+(header: `main @ 067a297`), so unpushed changes in
 a local meta clone are invisible to the check — say so when the user is editing
 meta.
 

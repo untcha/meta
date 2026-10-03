@@ -126,8 +126,10 @@ bash skills/meta-check/scripts/meta-check.sh [--type cli|library|lambda] [PATH]
 bash skills/meta-check/scripts/meta-check.sh --dir ~/src
 ```
 
-It compares against `main` on GitHub (`META_REF` selects another branch or tag),
-so changes here only count once they are pushed. `LICENSE` is not checked:
+It compares against `main` on GitHub (`META_REF` selects another branch, tag or
+full commit ID), so changes here only count once they are pushed. The ref is
+resolved to its current commit first, so a push counts at once, not only after
+GitHub's raw file cache expires. `LICENSE` is not checked:
 licenses legitimately differ per repo. `internal/appmeta` is checked against
 `appmeta/` for `cli` and `lambda` projects that have it.
 
