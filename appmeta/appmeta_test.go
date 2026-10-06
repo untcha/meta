@@ -2,6 +2,7 @@ package appmeta
 
 import (
 	"runtime/debug"
+	"strings"
 	"testing"
 )
 
@@ -34,5 +35,18 @@ func TestResolveVersion(t *testing.T) {
 				t.Fatalf("resolveVersion() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestStringIncludesAllFields(t *testing.T) {
+	origVersion, origCommit, origBuildDate := Version, Commit, BuildDate
+	t.Cleanup(func() { Version, Commit, BuildDate = origVersion, origCommit, origBuildDate })
+
+	Version, Commit, BuildDate = "1.2.3", "abc1234", "2026-01-02T00:00:00Z"
+	got := String()
+	for _, want := range []string{"1.2.3", "abc1234", "2026-01-02T00:00:00Z"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("String() = %q, missing %q", got, want)
+		}
 	}
 }
