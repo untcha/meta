@@ -55,9 +55,9 @@ vars:
   BUILD_DATE:
     sh: date -u +"%Y-%m-%dT%H:%M:%SZ"
 
-  # LDFLAGS stamps version metadata into {{.APPMETA_DIR}} when that package
-  # exists; otherwise it falls back to plain strip flags so projects without
-  # an appmeta package build cleanly.
+  # LDFLAGS stamps the app name and version metadata into {{.APPMETA_DIR}}
+  # when that package exists; otherwise it falls back to plain strip flags so
+  # projects without an appmeta package build cleanly.
   LDFLAGS:
     sh: |
       if [ ! -d "{{.APPMETA_DIR}}" ]; then
@@ -68,6 +68,7 @@ vars:
       COMMIT_VALUE="${COMMIT:-{{.GIT_COMMIT}}}"
       BUILD_DATE_VALUE="${BUILD_DATE:-{{.BUILD_DATE}}}"
       echo "-s -w \
+      -X {{.APPMETA_MODULE_PATH}}.Name={{.APP_NAME}} \
       -X {{.APPMETA_MODULE_PATH}}.Version=${VERSION_VALUE} \
       -X {{.APPMETA_MODULE_PATH}}.Commit=${COMMIT_VALUE} \
       -X {{.APPMETA_MODULE_PATH}}.BuildDate=${BUILD_DATE_VALUE}"

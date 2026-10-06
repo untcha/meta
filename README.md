@@ -34,7 +34,7 @@ All three templates also pick up an optional, repo-local
 
 | Template | Adds on top of the shared tasks |
 | --- | --- |
-| `cli` | `build`, `build:check`, `clean`, `dev:install`, `install`, `dev:clean`; version/commit/date build stamping via `internal/appmeta` |
+| `cli` | `build`, `build:check`, `clean`, `dev:install`, `install`, `dev:clean`; name/version/commit/date build stamping via `internal/appmeta` |
 | `library` | `build` (compile-check, no binary), `check` incl. `vet` |
 | `lambda` | `build`, `package`, `package:clean`, `deploy` (zips `bootstrap`, ships via `aws lambda update-function-code`) |
 
@@ -101,7 +101,9 @@ mkdir -p internal/appmeta
 cp /path/to/meta/appmeta/*.go ./internal/appmeta/
 ```
 
-When nothing was stamped, `Version` falls back to the module version Go embeds
+`Name` is stamped from the Taskfile's `APP_NAME`. When nothing was stamped, it
+falls back to the last element of the main package path (`cmd/<app>` gives
+`<app>`), and `Version` falls back to the module version Go embeds
 in the binary, so `go install module@vX.Y.Z` reports the tag instead of `dev`.
 A build with `-buildvcs=false` still reports `dev`.
 
