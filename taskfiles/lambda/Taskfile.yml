@@ -35,19 +35,9 @@ vars:
   BIN_NAME: "bootstrap"
   LAMBDA_FUNCTION_NAME: "go-acme-lambda-name"
 
-  TARGET_OS: '{{default "linux" .TARGET_OS}}'
-  TARGET_ARCH: '{{default "amd64" .TARGET_ARCH}}'
-
+  # The build target (TARGET_OS / TARGET_ARCH, default linux/amd64) and the
+  # paths derived from it are resolved inside the tasks — see `build`.
   CGO: CGO_ENABLED=0
-  GOHOST: "GOOS={{.TARGET_OS}} GOARCH={{.TARGET_ARCH}}"
-
-  # Local builds go under dist/, never bin/. The Terraform builder module owns
-  # bin/ and zips that whole directory, so anything else left there would end up
-  # inside the Lambda package.
-  BIN_DIR: "dist/{{.TARGET_OS}}-{{.TARGET_ARCH}}"
-  BIN_PATH: "{{.BIN_DIR}}/{{.BIN_NAME}}"
-
-  ARTIFACT_PATH: '{{default (printf "dist/%s-%s-%s.zip" .APP_NAME .TARGET_OS .TARGET_ARCH) .ARTIFACT_PATH}}'
 
   # APPMETA_DIR is the package whose vars get stamped with version/commit/date.
   # Build stamping only happens when this directory exists (see LDFLAGS).
@@ -84,7 +74,30 @@ vars:
 
 tasks:
   build:
-    desc: Build the Lambda binary for the target OS/ARCH
+    desc: Build the Lambda binary for the target OS/ARCH (override with TARGET_OS / TARGET_ARCH)
+    # The label keys Task's up-to-date checksum per target. Without it every
+    # target shares the "build" checksum, so after building another target a
+    # rebuild of the first is skipped as up to date and leaves a stale binary.
+    label: "build:{{.TARGET_OS}}-{{.TARGET_ARCH}}"
+    # Resolved in task scope, not globally, so every way of choosing the target
+    # reaches the derived paths: env (`TARGET_ARCH=arm64 task package`), CLI
+    # (`task package TARGET_ARCH=arm64`) and call vars (`task: package` with
+    # `vars: {TARGET_ARCH: arm64}`). Global vars are resolved before call vars
+    # apply, so a call-var override changed TARGET_ARCH but left BIN_DIR and
+    # ARTIFACT_PATH on amd64 — packaging an arm64 binary under an amd64 name.
+    #
+    # `package` and `deploy` reuse this block through the anchor and forward
+    # the target to the task they call, so all three agree on the paths.
+    vars: &target-vars
+      TARGET_OS: '{{.TARGET_OS | default "linux"}}'
+      TARGET_ARCH: '{{.TARGET_ARCH | default "amd64"}}'
+      GOHOST: "GOOS={{.TARGET_OS}} GOARCH={{.TARGET_ARCH}}"
+      # Local builds go under dist/, never bin/. The Terraform builder module
+      # owns bin/ and zips that whole directory, so anything else left there
+      # would end up inside the Lambda package.
+      BIN_DIR: "dist/{{.TARGET_OS}}-{{.TARGET_ARCH}}"
+      BIN_PATH: "{{.BIN_DIR}}/{{.BIN_NAME}}"
+      ARTIFACT_PATH: '{{.ARTIFACT_PATH | default (printf "dist/%s-%s-%s.zip" .APP_NAME .TARGET_OS .TARGET_ARCH)}}'
     cmds:
       - mkdir -p {{.BIN_DIR}}
       - "{{.CGO}} {{.GOHOST}} go build -a -trimpath -ldflags='{{.LDFLAGS}}' -o {{.BIN_PATH}} ./cmd"
@@ -128,8 +141,13 @@ tasks:
 
   deploy:
     desc: Deploy the packaged Lambda code to AWS
+    vars: *target-vars
     cmds:
       - task: package
+        vars:
+          TARGET_OS: "{{.TARGET_OS}}"
+          TARGET_ARCH: "{{.TARGET_ARCH}}"
+          ARTIFACT_PATH: "{{.ARTIFACT_PATH}}"
       - |
         if [ -z "{{.LAMBDA_FUNCTION_NAME}}" ]; then
           echo "LAMBDA_FUNCTION_NAME is required" >&2
@@ -160,8 +178,11 @@ tasks:
 
   package:
     desc: Package the Lambda binary into a zip artifact
+    label: "package:{{.TARGET_OS}}-{{.TARGET_ARCH}}"
+    vars: *target-vars
     cmds:
       - task: build
+        vars: { TARGET_OS: "{{.TARGET_OS}}", TARGET_ARCH: "{{.TARGET_ARCH}}" }
       - mkdir -p $(dirname {{.ARTIFACT_PATH}})
       - rm -f {{.ARTIFACT_PATH}}
       - zip -j {{.ARTIFACT_PATH}} {{.BIN_PATH}}
