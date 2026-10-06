@@ -20,7 +20,10 @@ version: "3"
 #      `task: :lint`, `task: :build`, `deps: [":build"]`.
 #
 #   2. Vars from the root Taskfile ARE visible here — BIN_NAME, APP_NAME,
-#      BIN_DIR, RELEASE_TARGETS and friends resolve without being passed in.
+#      RELEASE_TARGETS and friends resolve without being passed in. In the cli
+#      Taskfile the target-derived paths (BIN_DIR, BIN_PATH) live inside the
+#      `build` task, so build them here from bin/<os>-<arch>/{{.BIN_NAME}}, and
+#      pick a target with call vars: `task: :build` + `vars: {TARGET_OS: linux}`.
 #      (Verified against Task 3.53.1 and 3.54.0; some repos carry a redundant
 #      `vars: {BIN_NAME: "{{.BIN_NAME}}"}` on the include, which is not needed.)
 
