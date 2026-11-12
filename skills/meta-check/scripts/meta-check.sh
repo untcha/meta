@@ -53,7 +53,7 @@ if [ -z "${META_RAW:-}" ]; then
 fi
 
 # Type-independent files, checked only if present. Same path locally and in meta.
-SHARED_FILES=(".gitignore" ".golangci.yml" "AGENTS.md" "docs/COMMIT_GUIDE.md")
+SHARED_FILES=(".gitignore" ".golangci.yml" ".rumdl.toml" "AGENTS.md" "docs/COMMIT_GUIDE.md")
 
 # Build metadata package: internal/appmeta/<file> locally, appmeta/<file> in meta.
 # Checked only if present: the Taskfiles build without it.

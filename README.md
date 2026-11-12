@@ -6,6 +6,7 @@ This repo contains Alex's meta configuration files:
 
 - `.gitignore` template
 - `.golangci.yml` configuration
+- `.rumdl.toml` Markdown lint configuration
 - `LICENSE` template
 - `Taskfile.yml` templates (see [Taskfiles](#taskfiles))
 - `appmeta` build metadata package (see [appmeta](#appmeta))
@@ -15,7 +16,7 @@ This repo contains Alex's meta configuration files:
 
 The `taskfiles/` directory holds [Task](https://taskfile.dev) templates for each
 kind of Go project. Tasks shared by every project type (`fmt`, `lint`, `vet`,
-`vuln`, `deps:*`, `test:*`, coverage, cache/coverage cleanup) live once in
+`vuln`, `md:*`, `deps:*`, `test:*`, coverage, cache/coverage cleanup) live once in
 `taskfiles/common.yml`. Each project-type template includes it with
 `flatten: true`, so the shared tasks appear unprefixed (`task lint`, `task test`)
 alongside the type-specific ones.

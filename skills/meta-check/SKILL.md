@@ -1,6 +1,6 @@
 ---
 name: meta-check
-description: Use when checking whether a repo, or every repo in a folder, has drifted from the untcha/meta templates (Taskfile.yml, taskfiles/common.yml, .gitignore, .golangci.yml, AGENTS.md, docs/COMMIT_GUIDE.md, internal/appmeta), when asked about "meta drift" or being "out of sync with meta", or when asked which repo-specific tasks could be reused in other repos.
+description: Use when checking whether a repo, or every repo in a folder, has drifted from the untcha/meta templates (Taskfile.yml, taskfiles/common.yml, .gitignore, .golangci.yml, .rumdl.toml, AGENTS.md, docs/COMMIT_GUIDE.md, internal/appmeta), when asked about "meta drift" or being "out of sync with meta", or when asked which repo-specific tasks could be reused in other repos.
 ---
 
 # meta-check
