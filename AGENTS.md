@@ -88,9 +88,7 @@ pkg/...             # only if genuinely reusable
 - `--version` (and a `version` subcommand, if any) prints one line:
   `<binary> <appmeta.String()>`, e.g. `tool v1.2.0 (commit abc1234, built …)`.
   With cobra, set `Version: appmeta.String()` and
-  `SetVersionTemplate("<binary> {{.Version}}\n")`. With fang, also pass
-  `fang.WithVersion(appmeta.String())`; otherwise fang overwrites `Version`
-  with its own build info string. Skip `fang.WithCommit`, which repeats the commit.
+  `SetVersionTemplate("<binary> {{.Version}}\n")`.
 - When nothing is stamped (`Name == ""`), fall back to the last element of the
   main package path, so `go install module/cmd/<app>@vX.Y.Z` reports `<app>`.
 - Never hardcode the app name in `appmeta`: the template stays identical across
@@ -126,7 +124,9 @@ it starts from, under `taskfiles/`.
 
 ### CLI Tools → `taskfiles/cli/Taskfile.yml`
 
-- Use **Cobra** (commands), **Viper** (config), **charmbracelet/fang** (polish).
+- Use **Cobra** (commands) and **Viper** (config).
+- Run the root command with `SilenceErrors` and `SilenceUsage` set, print the
+  returned error to stderr once, and exit with the repo's exit-code mapping.
 - Keep `cmd/...` thin — delegate to `internal/` packages. Fail fast with clear,
   actionable errors.
 - Resolve config from flags, env vars, and config file (Viper). Consistent
@@ -222,4 +222,4 @@ For any library, framework, tooling, or version-specific question:
 
 ## Meta
 
-Version: v0.6.3 | Updated: 2026-10-06 | Author: Alex Untch
+Version: v0.7.0 | Updated: 2026-11-12 | Author: Alex Untch
