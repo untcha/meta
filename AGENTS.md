@@ -92,9 +92,8 @@ pkg/...             # only if genuinely reusable
 - When nothing is stamped (`Name == ""`), fall back to the last element of the
   main package path, so `go install module/cmd/<app>@vX.Y.Z` reports `<app>`.
 - Never hardcode the app name in `appmeta`: the template stays identical across
-  repos and the Taskfile stays the one place the name lives. A repo that needs
-  a User-Agent adds it below the template code:
-  `func UserAgent() string { return Name + "/" + Version }`.
+  repos and the Taskfile stays the one place the name lives. API clients send
+  `appmeta.UserAgent()` (`<name>/<version>`) as their User-Agent.
 
 ### Tooling
 
@@ -222,4 +221,4 @@ For any library, framework, tooling, or version-specific question:
 
 ## Meta
 
-Version: v0.7.0 | Updated: 2026-11-12 | Author: Alex Untch
+Version: v0.7.1 | Updated: 2026-11-12 | Author: Alex Untch
