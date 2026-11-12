@@ -58,6 +58,25 @@ tasks:
     cmds:
       - golangci-lint run -v
 
+  # Markdown via rumdl, configured by .rumdl.toml at the repo root. rumdl is a
+  # standalone binary with no `go run pkg@version` equivalent, so it is not
+  # pinned: whatever is installed is used (rumdl rarely changes rule defaults).
+  md:lint:
+    desc: Lint Markdown files with rumdl (writes nothing; for CI)
+    preconditions: &rumdl-installed
+      - sh: command -v rumdl
+        msg: "rumdl is not installed: brew install rumdl (or cargo install rumdl)"
+    cmds:
+      - rumdl check .
+
+  # `check --fix` rather than `rumdl fmt`: both fix what they can, but `fmt`
+  # exits 0 even when unfixable findings remain, which would look like success.
+  md:fmt:
+    desc: Fix Markdown files with rumdl, then report what it could not fix
+    preconditions: *rumdl-installed
+    cmds:
+      - rumdl check --fix .
+
   # `go run pkg@version` instead of a `tool` directive in go.mod: the version
   # is pinned and checksum-verified, and a library doesn't pass a dev tool's
   # dependencies on to the modules that import it.

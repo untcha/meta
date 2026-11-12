@@ -102,6 +102,10 @@ pkg/...             # only if genuinely reusable
 
 - Use **Taskfile** for automation (see templates below). Reproducible builds:
   pin versions, no implicit installs. Avoid Makefiles and over-engineered pipelines.
+- Markdown: `task md:lint` (CI) and `task md:fmt` (fix), using **rumdl** with the
+  repo's `.rumdl.toml`. rumdl is a standalone binary that can't be pinned like a
+  `go run` tool, so the installed version is used; install it explicitly
+  (Homebrew or Cargo), never implicitly via `uvx`.
 - Keep `common.yml` at `taskfiles/common.yml`. The templates already include it
   as `./taskfiles/common.yml`, relative to the destination repo root, so copy
   them without editing the include. Keep the path repo-relative and never point
@@ -195,6 +199,7 @@ project-specific needs.
 
 - [.gitignore](https://github.com/untcha/meta/blob/main/.gitignore)
 - [.golangci.yml](https://github.com/untcha/meta/blob/main/.golangci.yml)
+- [.rumdl.toml](https://github.com/untcha/meta/blob/main/.rumdl.toml)
 - [LICENSE](https://github.com/untcha/meta/blob/main/LICENSE)
 - [taskfiles](https://github.com/untcha/meta/tree/main/taskfiles)
   (`common.yml` + `cli` / `library` / `lambda`)
