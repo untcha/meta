@@ -102,6 +102,9 @@ pkg/...             # only if genuinely reusable
 
 - Use **Taskfile** for automation (see templates below). Reproducible builds:
   pin versions, no implicit installs. Avoid Makefiles and over-engineered pipelines.
+- Dead code: `task deadcode` reports functions no `main` or test reaches,
+  including exported ones that `task lint` cannot see. Judge each finding: a dead
+  method may still satisfy an interface.
 - Markdown: `task md:lint` (CI) and `task md:fmt` (fix), using **rumdl** with the
   repo's `.rumdl.toml`. rumdl is a standalone binary that can't be pinned like a
   `go run` tool, so the installed version is used; install it explicitly
